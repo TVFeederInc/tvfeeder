@@ -1,0 +1,72 @@
+<!-- Web Page 1 -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Page 1</title>
+</head>
+<body>
+    <textarea id="messageInput" placeholder="Type a message..."></textarea>
+    <button id="sendButton">Send</button>
+    <div id="receivedMessages"></div>
+
+    <script>
+        const receivedMessagesDiv = document.getElementById('receivedMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        let pc1, pc2;
+
+        sendButton.addEventListener('click', () => {
+            const message = messageInput.value;
+            sendMessage(message);
+        });
+
+        async function sendMessage(message) {
+            const offer = await pc1.createOffer();
+            await pc1.setLocalDescription(offer);
+            await pc2.setRemoteDescription(offer);
+
+            const answer = await pc2.createAnswer();
+            await pc2.setLocalDescription(answer);
+            await pc1.setRemoteDescription(answer);
+
+            // Send the message using data channel
+            const dataChannel = pc1.createDataChannel('chat');
+            dataChannel.send(message);
+
+            dataChannel.addEventListener('message', event => {
+                receivedMessagesDiv.textContent += 'Web Page 2: ' + event.data + '\n';
+            });
+        }
+
+        async function initialize() {
+            pc1 = new RTCPeerConnection();
+            pc2 = new RTCPeerConnection();
+
+            // Create data channel for Web Page 1
+            pc1.ondatachannel = event => {
+                const dataChannel = event.channel;
+                dataChannel.addEventListener('message', event => {
+                    receivedMessagesDiv.textContent += 'Web Page 2: ' + event.data + '\n';
+                });
+            };
+
+            // Create data channel for Web Page 2
+            const dataChannel = pc2.createDataChannel('chat');
+            dataChannel.addEventListener('message', event => {
+                receivedMessagesDiv.textContent += 'Web Page 1: ' + event.data + '\n';
+            });
+
+            const offer = await pc1.createOffer();
+            await pc1.setLocalDescription(offer);
+            await pc2.setRemoteDescription(offer);
+
+            const answer = await pc2.createAnswer();
+            await pc2.setLocalDescription(answer);
+            await pc1.setRemoteDescription(answer);
+        }
+
+        initialize();
+    </script>
+</body>
+</html>
